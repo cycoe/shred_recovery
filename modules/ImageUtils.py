@@ -45,10 +45,5 @@ class ImageUtils(object):
     def binary(self):
         if not self.image_array:
             self.image_to_array()
-        self.image_array = np.where(
-            self.image_array > 127,
-            self.white_array,
-            self.black_array
-        )
+        self.image_array = self.image_array // 128
         return self
-    
