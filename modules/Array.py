@@ -121,7 +121,7 @@ class Array(object):
         # end_edge = self.convolution(end_edge, np.array(kernel))
 
         cos_theta = np.dot(begin_edge, end_edge) / np.linalg.norm(begin_edge) / np.linalg.norm(end_edge)
-        return 0.5 + 0.5 * cos_theta
+        return cos_theta
 
     def convolution(self, vector, kernel):
         kernel = kernel / sum(kernel)
