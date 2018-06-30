@@ -25,10 +25,21 @@
 
 import os
 import random
+import time
 import numpy as np
 
 from modules.Array import Array
 from modules.Ant import Ant
+
+
+def timer(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        print('function <{}> running for {} seconds'.format(func.__name__, str(end - start)))
+        return result
+    return wrapper
 
 
 def shred_horizontal():
@@ -128,6 +139,7 @@ def cost_cal(cost_matrix, path):
         cost += cost_matrix[path[index]][path[index + 1]]
     return cost
 
+@timer
 def ants_algorithm():
     array_pool = []
     image_path_ = os.listdir('res/attachments/1/')
@@ -162,7 +174,7 @@ def ants_algorithm():
                 best_path = ant.path
 
             pheromone_per_cost = 2 / total_cost
-            # site_pheromone = site_pheromone * decay
+
             for index in range(site_num - 1):
                 previous = ant.path[index]
                 next = ant.path[index + 1]
@@ -170,7 +182,6 @@ def ants_algorithm():
 
         site_pheromone = site_pheromone * decay
         site_pheromone += pheromone_temp
-        print(site_pheromone)
 
     image_join = array_pool[best_path[0]]
     for index in range(1, site_num):

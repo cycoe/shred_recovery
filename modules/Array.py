@@ -122,15 +122,15 @@ class Array(object):
         # begin_edge = self.convolution(begin_edge, np.array(kernel))
         # end_edge = self.convolution(end_edge, np.array(kernel))
 
-        # cos_theta = np.dot(begin_edge, end_edge) / np.linalg.norm(begin_edge) / np.linalg.norm(end_edge)
-        # return cos_theta
+        cos_theta = np.dot(begin_edge, end_edge) / np.linalg.norm(begin_edge) / np.linalg.norm(end_edge)
+        return cos_theta
 
-        edge_diff = begin_edge - end_edge
-        counter = 0
-        for diff in edge_diff:
-            if diff < 0.1:
-                counter += 1
-        return counter / len(begin_edge)
+        # edge_diff = begin_edge - end_edge
+        # counter = 0
+        # for diff in edge_diff:
+        #     if diff < 0.1:
+        #         counter += 1
+        # return counter / len(begin_edge)
 
     def convolution(self, vector, kernel):
         kernel = kernel / sum(kernel)
