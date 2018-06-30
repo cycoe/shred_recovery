@@ -62,6 +62,7 @@ class Array(object):
         self.width = self.image_obj.size[0]
         self.height = self.image_obj.size[1]
         self.image_to_array()
+        del self.image_obj
         return self
 
     def image_to_array(self):
@@ -89,7 +90,7 @@ class Array(object):
         image.save(image_path)
 
     def load_array(self, array):
-        self.image_array = array
+        self.image_array = np.array(array)
         return self
 
     def get_edge(self, direction):
@@ -109,22 +110,31 @@ class Array(object):
         else:
             return self.image_array[:, 0]
 
-    def match(self, image=None, direction=2, kernel=(0.3, 0.4, 0.3)):
+    def match(self, array=None, direction=2, kernel=(0.1, 0.8, 0.1)):
         """
         计算余弦相似度
         :param image:
         :return:
         """
-        begin_edge = self.get_edge(direction)
-        end_edge = image.get_edge((direction + 2) % 4) if image else np.array([1] * len(begin_edge))
+        begin_edge = self.get_edge(direction) / 255
+        white_edge = np.array([1] * len(begin_edge))
+        end_edge = array.get_edge((direction + 2) % 4) / 255 if array else white_edge
         # begin_edge = self.convolution(begin_edge, np.array(kernel))
         # end_edge = self.convolution(end_edge, np.array(kernel))
 
-        cos_theta = np.dot(begin_edge, end_edge) / np.linalg.norm(begin_edge) / np.linalg.norm(end_edge)
-        return cos_theta
+        # cos_theta = np.dot(begin_edge, end_edge) / np.linalg.norm(begin_edge) / np.linalg.norm(end_edge)
+        # return cos_theta
+
+        edge_diff = begin_edge - end_edge
+        counter = 0
+        for diff in edge_diff:
+            if diff < 0.1:
+                counter += 1
+        return counter / len(begin_edge)
 
     def convolution(self, vector, kernel):
         kernel = kernel / sum(kernel)
+        new_vector = vector.copy()
         vector_len = len(vector)
         kernel_len = len(kernel)
         center_index = kernel_len // 2
@@ -135,6 +145,6 @@ class Array(object):
             end_index = center_index + vector_len - x if center_index + vector_len - x < kernel_len else kernel_len - 1
             for y in range(begin_index, end_index):
                 new_value += vector[x + y - center_index] * kernel[y]
-            vector[x] = new_value
+            new_vector[x] = new_value
 
-        return vector
+        return new_vector

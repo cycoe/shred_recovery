@@ -25,8 +25,10 @@
 
 import os
 import random
+import numpy as np
 
 from modules.Array import Array
+from modules.Ant import Ant
 
 
 def shred_horizontal():
@@ -110,5 +112,70 @@ def shred_h_and_v():
     image_join.convert_to_image('test.jpg')
 
 
+def select_from_prob(vector, path):
+    vector = vector.copy()
+    for locale in path:
+        vector[locale] = 0
+    pointer = random.random() * sum(vector)
+    for index in range(len(vector)):
+        pointer -= vector[index]
+        if pointer <= 0:
+            return index
+
+def cost_cal(cost_matrix, path):
+    cost = 0
+    for index in range(len(path) - 1):
+        cost += cost_matrix[path[index]][path[index + 1]]
+    return cost
+
+def ants_algorithm():
+    array_pool = []
+    image_path_ = os.listdir('res/attachments/1/')
+    random.shuffle(image_path_)  # 对样本池进行洗牌，测试算法稳定性
+    for index in range(len(image_path_)):
+        array = Array().load_image('res/attachments/1/' + image_path_[index])
+        array_pool.append(array)
+
+    alpha = 1
+    beta = 2
+    decay = 0.5
+    site_num = len(array_pool)
+    pheromone_ant = site_num
+    site_cost = 1 - np.array([[array_pool[y].match(array_pool[x], Array.RIGHT) for x in range(site_num)] for y in range(site_num)])
+    site_pheromone = np.array([[1] * site_num] * site_num)
+
+    best_cost = 1000
+    best_path = []
+    for cycle in range(20):
+        pheromone_temp = np.array([[0 for x in range(site_num)] for y in range(site_num)])
+        for ant_index in range(20):
+            ant = Ant(cycle, site_num)
+            for move in range(site_num - 1):
+                site_prob = site_pheromone[ant.locale] ** alpha * (0.1 / (site_cost[ant.locale] + 0.1)) ** beta
+                next_site = select_from_prob(site_prob, ant.path)
+                ant.move(next_site)
+
+            total_cost = cost_cal(site_cost, ant.path)
+
+            if cost_cal(site_cost, ant.path) < best_cost:
+                best_cost = total_cost
+                best_path = ant.path
+
+            pheromone_per_cost = 2 / total_cost
+            # site_pheromone = site_pheromone * decay
+            for index in range(site_num - 1):
+                previous = ant.path[index]
+                next = ant.path[index + 1]
+                pheromone_temp[previous][next] += pheromone_per_cost
+
+        site_pheromone = site_pheromone * decay
+        site_pheromone += pheromone_temp
+        print(site_pheromone)
+
+    image_join = array_pool[best_path[0]]
+    for index in range(1, site_num):
+        image_join = image_join.hjoin(array_pool[best_path[index]])
+    image_join.convert_to_image('test.jpg')
+
 if __name__ == '__main__':
-    shred_h_and_v()
+    ants_algorithm()
