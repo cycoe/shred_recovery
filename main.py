@@ -24,15 +24,20 @@
 #                      Buddha Bless, No Bug !
 
 import os
-import random
 import time
+import glob
 import numpy as np
 
 from modules.Array import Array
-from modules.Ant import Ant
+from modules.Field import Field
 
 
 def timer(func):
+    """
+    计时装饰器
+    :param func:
+    :return:
+    """
     def wrapper(*args, **kwargs):
         start = time.time()
         result = func(*args, **kwargs)
@@ -41,152 +46,214 @@ def timer(func):
         return result
     return wrapper
 
+def reset(path):
+    """
+    以列表中最大的元素的位置为中心，将左右两边的元素对调位置
+    针对路径环，从最大元素的位置展开成路径，并将最大元素作为起始点
+    :param path: <list> 原始 path 列表
+    :return: <list> 重排后的 path 列表
+    """
+    # path 中最大元素的索引
+    pointer = path.index(len(path) - 1)
+    # 将 pointer 前的元素移至列表后面
+    path.extend(path[:pointer])
+    del path[:pointer + 1]
+    return path
 
-def shred_horizontal():
-    array_ = []
+def sort(array_, direction=Array.RIGHT, cycle=20, ant_num=400):
+    """
+    排序方法
+    :param array_: <list of Array> 需要排序的 Array 对象的列表
+    :param direction: Array 相邻对象比较的方向
+    :param cycle: 蚁群算法的总迭代次数
+    :param ant_num: 蚂蚁的总数
+    :return: <Array> 合并后的 Array 对象
+    """
+    # 目的地的数量
+    site_num = len(array_)
+    # 目的地之前的代价矩阵
+    cost_matrix = 1 - np.array(
+        [[array_[y].match(array_[x], direction) for x in range(site_num)] for y in range(site_num)])
+    # 初始化 Field 对象用于处理蚁群算法
+    field = Field(cost_matrix, cycle, ant_num)
+    # 运行蚁群算法获得最佳路径
+    best_path = field.run()
+    # 根据定义的起始点对路径进行重排
+    best_path = reset(best_path)
 
-    max_left = 0
-    max_left_index = 0
-    image_path_ = os.listdir('res/attachments/1/')
-    for index in range(len(image_path_)):
-        array = Array().load_image('res/attachments/1/' + image_path_[index])
-        if sum(array.get_edge(Array.LEFT)) > max_left:
-            max_left = sum(array.get_edge(Array.LEFT))
-            max_left_index = index
+    # 初始化 Array 对象用于储存最终合并得到的矩阵
+    array_join = Array()
+    # 根据矩阵比较的方向，使 join_method 指向对应方向的合并方法
+    if direction == Array.RIGHT:
+        join_method = array_join.hjoin
+    elif direction == Array.BOTTOM:
+        join_method = array_join.vjoin
+    else:
+        join_method = array_join.hjoin
 
-        array_.append(array)
+    # 按照路径顺序合并矩阵
+    for index in range(site_num - 1):
+        join_method(array_[best_path[index]])
 
-    join_image = array_[max_left_index]
-    del array_[max_left_index]
+    return array_join
+
+def in_inner_list(item, item_list):
+    """
+    判断 item 是否在列表内的列表里
+    :param item: 需要判断的对象
+    :param item_list: <list of list of item>
+    :return:
+    """
+    for item_ in item_list:
+        # 若 item 在其中一个列表 item_ 中
+        # 则返回 item_
+        if item in item_:
+            return item_
+    # 不存在则返回 False
+    return False
+
+def get_longests(item_list, num):
+    """
+    获得列表中最长的几个元素列表
+    :param item_list: <list> 待处理的元素列表
+    :param num: <int> 取前 num 个最长元素
+    :return: <list> 筛选过的元素列表
+    """
+    # 列表总长
+    total_num = len(item_list)
+    # 元素长度列表
+    length_ = [len(item) for item in item_list]
+
+    # 如果列表的长度不比 num 大，则无需处理
+    if total_num <= num:
+        return item_list
+
+    for cycoe in range(total_num - num):
+        index = length_.index(min(length_))
+        del item_list[index]
+        del length_[index]
+
+    return item_list
+
+def cluster(dis_matrix):
+    """
+    聚类方法
+    :param dis_matrix: 元素距离矩阵
+    :return: <list> 分类列表
+    """
+    # 初始化分类列表
+    class_list = []
+    dis_matrix = dis_matrix
+    # 将矩阵对角线上的值设为 10
+    for i in range(len(dis_matrix)):
+        dis_matrix[i][i] = 10
 
     while True:
-        max_match = 0
-        max_match_index = 0
-        for index in range(len(array_)):
-            current_match = join_image.match(array_[index])
-            if current_match > max_match:
-                max_match = current_match
-                max_match_index = index
+        # 从距离矩阵中取出最小的元素索引
+        position = dis_matrix.argmin()
+        # 取出的索引是按一维矩阵计算
+        # 需要将索引转化成 x 和 y 坐标
+        y = position // dis_matrix.shape[1]
+        x = position % dis_matrix.shape[1]
 
-        join_image = join_image.hjoin(array_[max_match_index])
-        print(array_[max_match_index])
-        del array_[max_match_index]
+        # 获取 x 和 y 是否在分类列表中存在
+        # 若存在则得到所在的分类
+        x_in = in_inner_list(x, class_list)
+        y_in = in_inner_list(y, class_list)
 
-        if not array_:
+        # 如果 x 在分类中而 y 不在
+        # 并且 x 所在分类的列表没满
+        # 将 y 也加入 x 的分类
+        if x_in and not y_in:
+            if len(x_in) < 19:
+                x_in.add(y)
+            # else:
+            #     dis_matrix[y] = 10
+            #     dis_matrix[:, y] = 10
+
+        # 如果 y 在分类中而 x 不在
+        # 并且 y 所在分类的列表没满
+        # 将 x 也加入 y 的分类
+        elif not x_in and y_in:
+            if len(y_in) < 19:
+                y_in.add(x)
+            # else:
+            #     dis_matrix[x] = 10
+            #     dis_matrix[:, x] = 10
+
+        # 如果 x 和 y 都不在分类中
+        # 则将 x, y 放入新分类
+        elif not x_in and not y_in:
+            class_list.append({x, y})
+
+        # 如果 x 和 y 都已经在存在的分类中
+        # 并且 x 和 y 不在同一类
+        # 并且 x 的分类和 y 的分类合并后长度没有超限
+        # 则将 x 的分类和 y 的分类合并
+        elif x_in != y_in and len(x_in) + len(y_in) <= 19:
+            for item in y_in:
+                x_in.add(item)
+            del class_list[class_list.index(y_in)]
+
+        dis_matrix[x][y] = 10
+        dis_matrix[y][x] = 10
+
+        if dis_matrix.min() == 10:
             break
 
-    join_image.convert_to_image('test.jpg')
+    return class_list
 
-def shred_h_and_v():
-    # 使用贪心算法
-    # 生成样本池
-    array_pool = []
-    image_path_ = os.listdir('res/attachments/3/')
-    random.shuffle(image_path_)  # 对样本池进行洗牌，测试算法稳定性
-    for index in range(len(image_path_)):
-        array = Array().load_image('res/attachments/3/' + image_path_[index])
-        array_pool.append(array)
-
-    row = 11
-    column = 19
-    array_matrix = [[object for x in range(column)]for y in range(row)]
-    for y in range(row):
-        for x in range(column):
-            max_match = 0
-            max_match_index = 0
-            for index in range(len(array_pool)):
-                match = 0
-                match += array_pool[index].match(None if x == 0 else array_matrix[y][x - 1], Array.LEFT)
-                match += array_pool[index].match(None if y == 0 else array_matrix[y - 1][x], Array.TOP)
-                match += array_pool[index].match(None, Array.RIGHT) if x == column - 1 else 0
-                match += array_pool[index].match(None, Array.BOTTOM) if y == row - 1 else 0
-
-                if match > max_match:
-                    max_match = match
-                    max_match_index = index
-
-            array_matrix[y][x] = array_pool[max_match_index]
-            del array_pool[max_match_index]
-
-
-    # 根据生成的 array_matrix 矩阵阵列合并图片
-    image_join_ = []
-    for y in range(row):
-        image_row = array_matrix[y][0]
-        for x in range(1, column):
-            image_row = image_row.hjoin(array_matrix[y][x])
-        image_join_.append(image_row)
-
-    image_join = image_join_[0]
-    for y in range(1, row):
-        image_join = image_join.vjoin(image_join_[y])
-    image_join.convert_to_image('test.jpg')
-
-
-def select_from_prob(vector, path):
-    vector = vector.copy()
-    for locale in path:
-        vector[locale] = 0
-    pointer = random.random() * sum(vector)
-    for index in range(len(vector)):
-        pointer -= vector[index]
-        if pointer <= 0:
-            return index
-
-def cost_cal(cost_matrix, path):
-    cost = 0
-    for index in range(len(path) - 1):
-        cost += cost_matrix[path[index]][path[index + 1]]
-    return cost
 
 @timer
-def ants_algorithm():
+def ants_algorithm_h():
     array_pool = []
-    image_path_ = os.listdir('res/attachments/1/')
-    random.shuffle(image_path_)  # 对样本池进行洗牌，测试算法稳定性
-    for index in range(len(image_path_)):
-        array = Array().load_image('res/attachments/1/' + image_path_[index])
+    problem = 2
+    for image_path in glob.glob('res/attachments/{}/*.bmp'.format(str(problem))):
+        array = Array().load_image(image_path)
+        array_pool.append(array)
+    array_pool.append(Array().load_array([[255] * 1] * array_pool[0].height))
+
+    array_join = sort(array_pool, Array.RIGHT, 20, 20)
+    array_join.convert_to_image('problem{}.jpg'.format(str(problem)))
+
+@timer
+def ants_algorithm_h_v():
+    array_pool = []
+    problem = 3
+    # 将所有的矩阵加入到矩阵池中
+    for image_path in glob.glob('res/attachments/{}/*.bmp'.format(str(problem))):
+        array = Array().load_image(image_path)
         array_pool.append(array)
 
-    alpha = 1
-    beta = 2
-    decay = 0.5
+
     site_num = len(array_pool)
-    pheromone_ant = site_num
-    site_cost = 1 - np.array([[array_pool[y].match(array_pool[x], Array.RIGHT) for x in range(site_num)] for y in range(site_num)])
-    site_pheromone = np.array([[1] * site_num] * site_num)
+    # 根据行特征算法获得各个矩阵的距离矩阵
+    if os.path.exists('dis_matrix.npy'):
+        dis_matrix = np.load('dis_matrix.npy')
+    else:
+        # dis_matrix = np.array([[np.sum(np.abs(array_pool[y].get_row() - array_pool[x].get_row())) / 10 for x in range(site_num)] for y in range(site_num)])
+        dis_matrix = 1 - np.array(
+            [[array_pool[y].get_row().match(array_pool[x].get_row(), Array.RIGHT) for x in range(site_num)] for y in range(site_num)])
+        np.save('dis_matrix.npy', dis_matrix)
 
-    best_cost = 1000
-    best_path = []
-    for cycle in range(20):
-        pheromone_temp = np.array([[0 for x in range(site_num)] for y in range(site_num)])
-        for ant_index in range(20):
-            ant = Ant(cycle, site_num)
-            for move in range(site_num - 1):
-                site_prob = site_pheromone[ant.locale] ** alpha * (0.1 / (site_cost[ant.locale] + 0.1)) ** beta
-                next_site = select_from_prob(site_prob, ant.path)
-                ant.move(next_site)
+    print(dis_matrix)
 
-            total_cost = cost_cal(site_cost, ant.path)
+    # 聚类
+    class_list = cluster(dis_matrix)
+    new_class_list = get_longests(class_list, 11)
 
-            if cost_cal(site_cost, ant.path) < best_cost:
-                best_cost = total_cost
-                best_path = ant.path
+    # 根据分类，先沿横向合并，再沿纵向合并
+    array_ver = []
+    for class_ in new_class_list:
+        array_ = []
+        for index in class_:
+            array_.append(array_pool[index])
+        array_.append(Array().load_array([[255] * 1] * array_[0].height))
+        array_ver.append(sort(array_, Array.RIGHT, cycle=20, ant_num=200))
 
-            pheromone_per_cost = 2 / total_cost
+    array_ver.append(Array().load_array([[255] * array_ver[0].width] * 1))
+    sort(array_ver, Array.BOTTOM, cycle=20, ant_num=400).convert_to_image('problem{}.jpg'.format(str(problem)))
 
-            for index in range(site_num - 1):
-                previous = ant.path[index]
-                next = ant.path[index + 1]
-                pheromone_temp[previous][next] += pheromone_per_cost
-
-        site_pheromone = site_pheromone * decay
-        site_pheromone += pheromone_temp
-
-    image_join = array_pool[best_path[0]]
-    for index in range(1, site_num):
-        image_join = image_join.hjoin(array_pool[best_path[index]])
-    image_join.convert_to_image('test.jpg')
 
 if __name__ == '__main__':
-    ants_algorithm()
+    ants_algorithm_h_v()

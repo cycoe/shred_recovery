@@ -28,13 +28,25 @@ class Array(object):
         else:
             return 'Empty Array object'
 
+    def __update_size(self):
+        """
+        从图像或矩阵载入矩阵，以及矩阵大小改变后，更新矩阵高度和宽度数据
+        :return: 
+        """
+        self.height, self.width = self.image_array.shape
+
     def hjoin(self, other):
         """
         水平合并
         :param other: <Array> 参与合并的另一个 Array 对象
         :return: <Array> 合并后的 Array 对象
         """
-        return Array().load_array(np.hstack((self.image_array, other.image_array)))
+        if self.image_array is None:
+            self.image_array = other.image_array
+        else:
+            self.image_array = np.hstack((self.image_array, other.image_array))
+        self.__update_size()
+        return self
 
     def vjoin(self, other):
         """
@@ -42,7 +54,12 @@ class Array(object):
         :param other: <Array> 参与合并的另一个 Array 对象
         :return: <Array> 合并后的 Array 对象
         """
-        return Array().load_array(np.vstack((self.image_array, other.image_array)))
+        if self.image_array is None:
+            self.image_array = other.image_array
+        else:
+            self.image_array = np.vstack((self.image_array, other.image_array))
+        self.__update_size()
+        return self
 
     def load_image(self, image_path):
         """
@@ -85,42 +102,51 @@ class Array(object):
         return self
 
     def convert_to_image(self, image_path):
-        image_array = self.image_array
-        image = Image.fromarray(image_array.astype(np.uint8))
+        """
+        根据矩阵生成图片并保存
+        :param image_path:
+        :return:
+        """
+        image = Image.fromarray(self.image_array.astype(np.uint8))
         image.save(image_path)
 
     def load_array(self, array):
+        """
+        从矩阵载入数据
+        :param array: <np.array> 待载入矩阵
+        :return:
+        """
         self.image_array = np.array(array)
+        self.__update_size()
         return self
 
     def get_edge(self, direction):
         """
         得到图像矩阵的边缘向量
         :param direction: 对应的边缘
-        :return: <array> 边缘向量
+        :return: <np.array> 边缘向量
         """
         if direction == Array.LEFT:
             return self.image_array[:, 0]
         elif direction == Array.TOP:
             return self.image_array[0]
         elif direction == Array.RIGHT:
-            return self.image_array[:, self.width - 1]
+            return self.image_array[:, -1]
         elif direction == Array.BOTTOM:
-            return self.image_array[self.height - 1]
+            return self.image_array[-1]
         else:
             return self.image_array[:, 0]
 
-    def match(self, array=None, direction=2, kernel=(0.1, 0.8, 0.1)):
+    def match(self, array, direction=2, kernel=(0.1, 0.8, 0.1)):
         """
         计算余弦相似度
         :param image:
         :return:
         """
-        begin_edge = self.get_edge(direction) / 255
-        white_edge = np.array([1] * len(begin_edge))
-        end_edge = array.get_edge((direction + 2) % 4) / 255 if array else white_edge
-        # begin_edge = self.convolution(begin_edge, np.array(kernel))
-        # end_edge = self.convolution(end_edge, np.array(kernel))
+        begin_edge = self.get_edge(direction)
+        end_edge = array.get_edge((direction + 2) % 4)
+        # begin_edge = self.convolution(begin_edge.copy(), np.array(kernel))
+        # end_edge = self.convolution(end_edge.copy(), np.array(kernel))
 
         cos_theta = np.dot(begin_edge, end_edge) / np.linalg.norm(begin_edge) / np.linalg.norm(end_edge)
         return cos_theta
@@ -132,7 +158,35 @@ class Array(object):
         #         counter += 1
         # return counter / len(begin_edge)
 
+    def get_row(self):
+        """
+        得到矩阵每一行的特征
+        用于表征文字沿 y 轴的分布
+        从而对不同行的碎片进行聚类
+        :return:
+        """
+        array = np.sum(255 - self.image_array, 1) / 255 / self.width
+        # point_array = []
+        # white = False
+        # for item in array:
+        #     if item > 255 * self.width * 0.2 and not white:
+        #         point_array.append(1)
+        #         white = True
+        #     elif item <= 255 * self.width * 0.2 and white:
+        #         point_array.append(1)
+        #         white = False
+        #     else:
+        #         point_array.append(0)
+        return Array().load_array(array.reshape((self.height, 1)))
+        # return np.array(point_array).reshape((self.height, 1))
+
     def convolution(self, vector, kernel):
+        """
+        卷积
+        :param vector: 待卷积矩阵
+        :param kernel: 卷积核
+        :return:
+        """
         kernel = kernel / sum(kernel)
         new_vector = vector.copy()
         vector_len = len(vector)
