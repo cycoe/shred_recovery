@@ -228,13 +228,13 @@ def ants_algorithm_h_v():
 
     site_num = len(array_pool)
     # 根据行特征算法获得各个矩阵的距离矩阵
-    if os.path.exists('dis_matrix.npy'):
-        dis_matrix = np.load('dis_matrix.npy')
-    else:
+    # if os.path.exists('dis_matrix.npy'):
+    #     dis_matrix = np.load('dis_matrix.npy')
+    # else:
         # dis_matrix = np.array([[np.sum(np.abs(array_pool[y].get_row() - array_pool[x].get_row())) / 10 for x in range(site_num)] for y in range(site_num)])
-        dis_matrix = 1 - np.array(
-            [[array_pool[y].get_row().match(array_pool[x].get_row(), Array.RIGHT) for x in range(site_num)] for y in range(site_num)])
-        np.save('dis_matrix.npy', dis_matrix)
+    dis_matrix = 1 - np.array(
+        [[array_pool[y].get_row().match(array_pool[x].get_row(), Array.RIGHT) for x in range(site_num)] for y in range(site_num)])
+        # np.save('dis_matrix.npy', dis_matrix)
 
     print(dis_matrix)
 
