@@ -24,20 +24,20 @@ class Ant(object):
         # 蚂蚁的移动次数
         self.move_count = 0
         # 蚂蚁当前的位置
-        self.locale = -1
+        self.node = -1
 
         # 随机选取一个蚂蚁的起始位置
-        locale = random.randint(0, self.site_num - 1)
+        node = random.randint(0, self.site_num - 1)
         # 更新蚂蚁的位置
-        self.move(locale, 0)
+        self.move(node, 0)
 
-    def move(self, locale, cost):
+    def move(self, node, cost):
         """
         蚂蚁的移动方法
-        :param locale: 要到达的位置
+        :param node: 要到达的位置
         :return:
         """
-        self.locale = locale
-        self.path.append(locale)
+        self.node = node
+        self.path.append(node)
         self.move_count += 1
         self.total_cost += cost

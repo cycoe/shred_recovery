@@ -204,6 +204,17 @@ def cluster(dis_matrix):
     return class_list
 
 
+def plot(vector, color='r', label=''):
+    import matplotlib.pyplot as plt
+
+    plt.plot(vector, color, label=label)
+    plt.xlabel('pixel')
+    plt.ylabel('character density')
+    plt.title('character density distribution')
+    plt.legend()
+    plt.savefig('res/{}.jpg'.format(label))
+    plt.close('all')
+
 @timer
 def ants_algorithm_h():
     array_pool = []
@@ -241,6 +252,11 @@ def ants_algorithm_h_v():
     # 聚类
     class_list = cluster(dis_matrix)
     new_class_list = get_longests(class_list, 11)
+    print(new_class_list)
+
+    plot(array_pool[26].get_row().image_array, 'r', 'image 26')
+    plot(array_pool[165].get_row().image_array, 'g', 'image 165')
+    plot(array_pool[204].get_row().image_array, 'b', 'image 204')
 
     # 根据分类，先沿横向合并，再沿纵向合并
     array_ver = []
@@ -253,7 +269,6 @@ def ants_algorithm_h_v():
 
     array_ver.append(Array().load_array([[255] * array_ver[0].width] * 1))
     sort(array_ver, Array.BOTTOM, cycle=20, ant_num=400).convert_to_image('problem{}.jpg'.format(str(problem)))
-
 
 if __name__ == '__main__':
     ants_algorithm_h_v()

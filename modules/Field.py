@@ -27,23 +27,23 @@ class Field(object):
 
     def __init_field(self, cost_matrix):
         # 位置的数量
-        self.site_num = len(cost_matrix)
+        self.node_num = len(cost_matrix)
         # 位置间代价矩阵
         self.cost_matrix = cost_matrix
         # 位置间 pheromone 矩阵
-        self.phe_matrix = np.array([[1] * self.site_num] * self.site_num)
+        self.phe_matrix = np.array([[1] * self.node_num] * self.node_num)
         # 最优的代价
         self.best_cost = 1000
         # 最优的路径
         self.best_path = []
 
-    def __cal_prob(self, locale):
+    def __cal_prob(self, node):
         """
         计算蚂蚁爬行的可能性列表
         :return:
         """
-        cost_ = self.cost_matrix[locale]
-        prob_ = self.phe_matrix[locale] ** self.alpha * (1 / (10 * cost_ + 1)) ** self.beta
+        cost_ = self.cost_matrix[node]
+        prob_ = self.phe_matrix[node] ** self.alpha * (1 / (10 * cost_ + 1)) ** self.beta
         return prob_, cost_
 
     def __select_from_prob(self, prob_, tabu):
@@ -56,8 +56,8 @@ class Field(object):
         # 对 prob_ 进行深拷贝，防止对原数据进行修改
         prob_ = prob_.copy()
         # 禁忌表中出现过的位置，再次出现的可能性置为 0
-        for locale in tabu:
-            prob_[locale] = 0
+        for node in tabu:
+            prob_[node] = 0
         # 赌博轮盘指针
         pointer = random.random() * sum(prob_)
         for index in range(len(prob_)):
@@ -71,14 +71,14 @@ class Field(object):
         :return: 
         """
         # 初始化一个矩阵用于存储蚂蚁爬过导致 pheromone 的变化
-        pheromone_diff = np.array([[0 for x in range(self.site_num)] for y in range(self.site_num)])
+        pheromone_diff = np.array([[0 for x in range(self.node_num)] for y in range(self.node_num)])
 
         for ant_index in range(self.ant_num):
-            ant = Ant(ant_index, self.site_num)
-            for move in range(self.site_num - 1):
-                prob_, cost_ = self.__cal_prob(ant.locale)
-                next_site = self.__select_from_prob(prob_, ant.path)
-                ant.move(next_site, cost_[next_site])
+            ant = Ant(ant_index, self.node_num)
+            for move in range(self.node_num - 1):
+                prob_, cost_ = self.__cal_prob(ant.node)
+                next_node = self.__select_from_prob(prob_, ant.path)
+                ant.move(next_node, cost_[next_node])
 
             # 如果该只蚂蚁爬行路径的代价小于最优代价，则更新最优代价和最优路径
             if ant.total_cost < self.best_cost:
@@ -90,7 +90,7 @@ class Field(object):
             # 计算单位代价的 pheromone 浓度
             pheromone_per_cost = self.P / ant.total_cost
             # 蚂蚁爬行路径上的 pheromone 增加
-            for index in range(self.site_num - 1):
+            for index in range(self.node_num - 1):
                 previous = ant.path[index]
                 next = ant.path[index + 1]
                 pheromone_diff[previous][next] += pheromone_per_cost
