@@ -8,7 +8,7 @@ from modules.Ant import Ant
 
 class Field(object):
 
-    def __init__(self, cost_matrix, cycle, ant_num):
+    def __init__(self, cost_matrix, cycle, ant_num, P=5):
         # pheromone 的指数因子
         self.alpha = 1
         # 代价的指数因子
@@ -16,7 +16,7 @@ class Field(object):
         # pheromone 的衰减系数
         self.decay = 0.5
         # pheromone 的总量
-        self.P = 5
+        self.P = P
 
         # 循环的次数
         self.cycle = cycle

@@ -60,7 +60,7 @@ def reset(path):
     del path[:pointer + 1]
     return path
 
-def sort(array_, direction=Array.RIGHT, cycle=20, ant_num=400):
+def sort(array_, direction=Array.RIGHT, cycle=20, ant_num=400, P=5):
     """
     排序方法
     :param array_: <list of Array> 需要排序的 Array 对象的列表
@@ -75,7 +75,7 @@ def sort(array_, direction=Array.RIGHT, cycle=20, ant_num=400):
     cost_matrix = 1 - np.array(
         [[array_[y].match(array_[x], direction) for x in range(site_num)] for y in range(site_num)])
     # 初始化 Field 对象用于处理蚁群算法
-    field = Field(cost_matrix, cycle, ant_num)
+    field = Field(cost_matrix, cycle, ant_num, P)
     # 运行蚁群算法获得最佳路径
     best_path = field.run()
     # 根据定义的起始点对路径进行重排
@@ -254,9 +254,10 @@ def ants_algorithm_h_v():
     new_class_list = get_longests(class_list, 11)
     print(new_class_list)
 
-    plot(array_pool[26].get_row().image_array, 'r', 'image 26')
-    plot(array_pool[165].get_row().image_array, 'g', 'image 165')
-    plot(array_pool[204].get_row().image_array, 'b', 'image 204')
+    # 绘图
+    # plot(array_pool[26].get_row().image_array, 'r', 'image 26')
+    # plot(array_pool[165].get_row().image_array, 'g', 'image 165')
+    # plot(array_pool[204].get_row().image_array, 'b', 'image 204')
 
     # 根据分类，先沿横向合并，再沿纵向合并
     array_ver = []
@@ -265,10 +266,10 @@ def ants_algorithm_h_v():
         for index in class_:
             array_.append(array_pool[index])
         array_.append(Array().load_array([[255] * 1] * array_[0].height))
-        array_ver.append(sort(array_, Array.RIGHT, cycle=20, ant_num=200))
+        array_ver.append(sort(array_, Array.RIGHT, cycle=20, ant_num=200, P=5))
 
     array_ver.append(Array().load_array([[255] * array_ver[0].width] * 1))
-    sort(array_ver, Array.BOTTOM, cycle=20, ant_num=400).convert_to_image('problem{}.jpg'.format(str(problem)))
+    sort(array_ver, Array.BOTTOM, cycle=20, ant_num=400, P=3).convert_to_image('problem{}.jpg'.format(str(problem)))
 
 if __name__ == '__main__':
     ants_algorithm_h_v()

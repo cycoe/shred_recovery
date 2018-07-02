@@ -166,19 +166,7 @@ class Array(object):
         :return:
         """
         array = np.sum(255 - self.image_array, 1) / 255 / self.width
-        # point_array = []
-        # white = False
-        # for item in array:
-        #     if item > 255 * self.width * 0.2 and not white:
-        #         point_array.append(1)
-        #         white = True
-        #     elif item <= 255 * self.width * 0.2 and white:
-        #         point_array.append(1)
-        #         white = False
-        #     else:
-        #         point_array.append(0)
         return Array().load_array(array.reshape((self.height, 1)))
-        # return np.array(point_array).reshape((self.height, 1))
 
     def convolution(self, vector, kernel):
         """
